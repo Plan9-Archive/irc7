@@ -12,6 +12,7 @@ int enctls = 0; // ssl/tls
 QLock lck;
 char *channels[256];
 int tchans;
+int rconn;
 
 char *server;
 char *passwd;
@@ -59,6 +60,7 @@ main(int argc, char *argv[])
 	char *debugfn;
 	int p[2], fd;
 
+	rconn = 0;
 	ARGBEGIN{
 	case 'f':
 		file = EARGF(usage());
@@ -233,6 +235,7 @@ reconnect(void)
 	}
 	for(i = 0; i < tchans; i++)
 		fprint(ircfd, "JOIN %s\r\n", channels[i]);
+	rconn++;
 	qunlock(&lck);
 }
 
@@ -262,6 +265,12 @@ logger(void)
 			} else if(n == 3 && atoi(f[1]) == 433) {
 				reregister();
 			}
+		}
+		if((rconn >= 1) && (rconn < 50))
+			sleep(5000);
+		else if (rconn > 500) {
+			fprint(logfd, "Error: too many reconnect attempts\r\n");
+			killall();
 		}
 		reconnect();
 	}
